@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from utils import *
+from crawl_utils import *
 import tldextract
 
 URL = "https://ku.edu.np/"
