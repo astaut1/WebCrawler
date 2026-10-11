@@ -1,9 +1,12 @@
+import time
 import bs4
 import requests
 import tldextract
 from bs4 import BeautifulSoup
 from collections import deque
 from urllib.parse import urljoin, urlparse, urlunparse
+from db_utils import insert_crawldata, file_name,open_database
+import sqlite3
 
 
 headers = {
@@ -57,10 +60,19 @@ def crawl_one_link(link,domain_name):
         page = requests.get(link, headers=headers, timeout=10)
     except requests.exceptions.RequestException as e:
         # If the website is down entirely, return an empty list instead of crashing
-        print(f"Request failed{e}")
+        print(f"Request failed{e}", link)
         return []
     soup = bs4.BeautifulSoup(page.content, "html.parser")
-    text = soup.get_text()
+    text = soup.get_text() if soup.get_text() else "No Text"
+    title = soup.title.string if soup.title and soup.title.string else "No Title"
+    try:
+        with sqlite3.connect(file_name, timeout=5.0) as conn:
+            conn.execute("""INSERT INTO crawldata (url,title,date_retrieved,text) VALUES (?,?,?,?)""",
+                         (link,title,time.time(), text))
+            print(link,"added to db")
+    except Exception as e:
+            print(f"Failed to add link: {e}",link)
+
     links = []
     for tag in soup.find_all("a"):
         href = tag.get('href')
@@ -70,18 +82,30 @@ def crawl_one_link(link,domain_name):
     return cleaned
 
 def crawl(baseurl):
+    f = open("geek.txt", "r")
+    links = f.read()
+    f.close()
+
     domain_name = tldextract.extract(baseurl).top_domain_under_public_suffix
+    if domain_name in links:
+        print(f"Already Crawled {domain_name}")
+        return
+
     base_normalized = normalize_url(baseurl)
     queue = deque([base_normalized])
     #seen set used for faster "in" check
     seen = {base_normalized}
     crawled = set()
-
+    conn = open_database(file_name)
+    if conn is None:
+        print("failed to load database")
+        return
     try:
         page = requests.get(base_normalized, headers=headers, timeout=10)
         soup = BeautifulSoup(page.content, "html.parser")
         if soup.title and soup.title.string:
             print(f"Starting Crawl: {soup.title.string.strip()}")
+
     except Exception as e:
         print(f"Failed to load base URL: {e}")
         return
@@ -100,6 +124,9 @@ def crawl(baseurl):
                 count += 1
                 if count == 1:
                     print(f"adding 1 link:{new_link} ")
-        print(f" -> Added {count} new links to queue (Queue size: {len(queue)}, Crawled Size: {len(crawled)})")
-
+        print(f" -> Added {count} new links to queue (Queue size: {len(queue)}, Crawled Size: {len(crawled)}), Seen Size: {len(seen)}")
+        f = open("geek.txt", "a")
+        f.write("\n"+base_normalized)
+        f.close()
 #def crawl_with_sitemap(URL):
+#crawl("https://www.inspiredtaste.net")
