@@ -17,8 +17,8 @@ def open_database(filename):
         ''')
         return connection_obj
     except Exception as e:
-        print(e)
-        print("here")
+        print("Database Error:",e)
+
         return None
 
 def insert_crawldata(cursor,url,title,date_retrieved,text):
@@ -44,15 +44,22 @@ def fetch_all_data(cursor):
     return all_urls,all_titles,all_text
 
 def all_data_to_csv():
-    with sqlite3.connect("database.db") as conn:
+    with sqlite3.connect("crawldata.db") as conn:
         # Read the entire table directly into a Pandas DataFrame
-        df = pd.read_sql_query("SELECT * FROM users", conn)
+        df = pd.read_sql_query("SELECT * FROM crawldata", conn)
         df.to_csv("crawl_exports.csv", index=False)
 
 def read_csv():
     df = pd.read_csv("crawl_exports.csv",usecols=[0,1,3])
-
     return df
+
+def remove_line_breaks():
+    with sqlite3.connect("crawldata.db") as conn:
+        # Read the entire table directly into a Pandas DataFrame
+        df = pd.read_sql_query("SELECT * FROM crawldata", conn)
+        df['text'] = df['text'].str.replace("\n", " ")
+        df.to_csv("crawl_exports.csv", index=False)
+
 
 def close_database(connection_obj):
     connection_obj.close()

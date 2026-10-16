@@ -63,7 +63,7 @@ def crawl_one_link(link,domain_name):
         print(f"Request failed{e}", link)
         return []
     soup = bs4.BeautifulSoup(page.content, "html.parser")
-    text = soup.get_text() if soup.get_text() else "No Text"
+    text = soup.get_text().replace("\n"," ") if soup.get_text() else "No Text"
     title = soup.title.string if soup.title and soup.title.string else "No Title"
     try:
         with sqlite3.connect(file_name, timeout=5.0) as conn:
@@ -82,7 +82,7 @@ def crawl_one_link(link,domain_name):
     return cleaned
 
 def crawl(baseurl):
-    f = open("geek.txt", "r")
+    f = open("links.txt", "r")
     links = f.read()
     f.close()
 
@@ -125,8 +125,6 @@ def crawl(baseurl):
                 if count == 1:
                     print(f"adding 1 link:{new_link} ")
         print(f" -> Added {count} new links to queue (Queue size: {len(queue)}, Crawled Size: {len(crawled)}), Seen Size: {len(seen)}")
-        f = open("geek.txt", "a")
-        f.write("\n"+base_normalized)
-        f.close()
-#def crawl_with_sitemap(URL):
-#crawl("https://www.inspiredtaste.net")
+    f = open("links.txt", "a")
+    f.write("\n" + base_normalized)
+    f.close()

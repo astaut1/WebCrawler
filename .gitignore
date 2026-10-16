@@ -1,3 +1,4 @@
 /.venv
 crawldata.db
 crawl_exports.csv
+links.txt
