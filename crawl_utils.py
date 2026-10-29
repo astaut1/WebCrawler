@@ -81,7 +81,7 @@ def crawl_one_link(link,domain_name):
     cleaned = links_cleaner(links,link,domain_name)
     return cleaned
 
-def crawl(baseurl):
+def crawl(baseurl) -> bool :
     f = open("links.txt", "r")
     links = f.read()
     f.close()
@@ -89,7 +89,7 @@ def crawl(baseurl):
     domain_name = tldextract.extract(baseurl).top_domain_under_public_suffix
     if domain_name in links:
         print(f"Already Crawled {domain_name}")
-        return
+        return True, None
 
     base_normalized = normalize_url(baseurl)
     queue = deque([base_normalized])
@@ -99,16 +99,19 @@ def crawl(baseurl):
     conn = open_database(file_name)
     if conn is None:
         print("failed to load database")
-        return
+        return False , e
     try:
         page = requests.get(base_normalized, headers=headers, timeout=10)
         soup = BeautifulSoup(page.content, "html.parser")
         if soup.title and soup.title.string:
             print(f"Starting Crawl: {soup.title.string.strip()}")
 
+        if len(soup.find_all("p", class_="wp-block-paragraph"))>0 :
+            return False,"Dynamic WebPage, Selenium Required"
+
     except Exception as e:
         print(f"Failed to load base URL: {e}")
-        return
+        return False , e
 
     while queue:
         link = queue.popleft()
@@ -128,3 +131,4 @@ def crawl(baseurl):
     f = open("links.txt", "a")
     f.write("\n" + base_normalized)
     f.close()
+    return True,None
